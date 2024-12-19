@@ -1,0 +1,71 @@
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+const dirLight = new THREE.DirectionalLight( 0xffffff, 2 );
+dirLight.position.set( 0,200,200);
+scene.add( dirLight );
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x3b3b3b, 1);
+document.body.appendChild(renderer.domElement);
+const controls = new OrbitControls(camera, renderer.domElement);
+
+let bike;
+let sinon;
+const loader = new GLTFLoader();
+let mixer;
+loader.load("rocketBike.glb", (gltf) => {
+	//const loadedDataB = await loader.loadAsync("cyberpunk_bike.glb");
+	bike = gltf.scene;
+	bike.position.set(0,0,0);
+	bike.scale.set(0.1,0.1,0.1)
+  	bike.rotation.y = -(2.5*Math.PI / 4)
+	var mroot = bike;
+	var bbox = new THREE.Box3().setFromObject(mroot);
+	var cent = bbox.getCenter(new THREE.Vector3());
+	var size = bbox.getSize(new THREE.Vector3());
+	var maxAxis = Math.max(size.x, size.y, size.z);
+	mroot.scale.multiplyScalar(1.0 / maxAxis);
+	bbox.setFromObject(mroot);
+	bbox.getCenter(cent);
+	bbox.getSize(size);
+	mroot.position.copy(cent).multiplyScalar(-1);
+	mroot.position.y-= (size.y * 0.5);
+	scene.add(mroot);
+	mixer = new THREE.AnimationMixer(mroot);
+	const animations = gltf.animations;
+    if (animations && animations.length > 0) {
+      const action = mixer.clipAction(animations[0]);
+      action.play();
+    }}
+);
+
+camera.position.z = 1;
+
+const clock = new THREE.Clock();
+function animate() {
+	if (mixer) {
+		const delta = clock.getDelta();
+		mixer.update(delta);
+	}
+	controls.update();
+	renderer.render(scene, camera);
+}
+renderer.setAnimationLoop(animate);
+
+
+
+
+   <script type="importmap">
+  		/*{
+    		"imports": {
+      			"three": "https://cdn.jsdelivr.net/npm/three@v0.171.0/build/three.module.js",
+      			"three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.171.0/examples/jsm/"
+    		}
+  		}*/
+	</script>
