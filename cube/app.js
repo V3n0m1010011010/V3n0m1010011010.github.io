@@ -13,7 +13,7 @@ scene = new THREE.Scene();
 
 renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
-window.addEventListener("resize", () => {renderer.setSize(window.innerWidth, window.innerHeight)})
+window.addEventListener("resize", () => {renderer.setSize(window.innerWidth, window.innerHeight);camera.aspect = window.innerWidth / window.innerHeight;camera.updateProjectionMatrix();})
 renderer.setClearColor(0xffffff, 1);
 renderer.setAnimationLoop(animate);
 renderer.shadowMap.enabled = true;
