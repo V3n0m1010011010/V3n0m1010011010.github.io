@@ -1,19 +1,37 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta name="viewport" content="width=320, initial-scale=1">
-    <meta charset="utf-8">
-    <style>
-      body, html {
-        min-width: 100%;
-        min-height: 100%;
-        margin: 0;
-        padding: 0;
-        font: Arial 14px;
-		/*background-color: black;*/
-      }
-    </style>
-    <script type="importmap">
+
+<head>
+  <meta name="viewport" content="width=320, initial-scale=1">
+  <meta charset="utf-8">
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+
+    #settings-menu {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background-color: rgba(0, 0, 0, 0.5);
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    label {
+      font-size: 14px;
+    }
+
+    input[type="range"] {
+      width: 150px;
+    }
+  </style>
+  <script type="importmap">
   		{
     		"imports": {
       			"three": "./libs/three.module.js",
@@ -21,12 +39,29 @@
     		}
   		}
 	</script>
-    <script type="module" src="appold.js"></script>
-    <!-- <script type="module" src="world.js"></script>
+  <script type="module" src="app.js"></script>
+  <!-- <script type="module" src="world.js"></script>
     <script type="module" src="model.js"></script> -->
-  </head>
+</head>
 
 
-  <body>
-  </body>
+<body>
+  <div id="settings-menu">
+    <label for="light-intensity">Light Intensity</label>
+    <input type="range" id="light-intensity" min="0" max="1" step="0.001" value=".5">
+
+    <label for="bg-color">Background Color</label>
+    <input type="color" id="bg-color" value="#000000">
+
+    <label for="box-rotation">Box Rotation Speed</label>
+    <input type="range" id="box-rotation" min="0" max="2" step="0.001" value="1">
+
+    <div>
+      <label for="box-rotation">Show Light-Helper</label>
+      <input type="checkbox" id="lighthelper" checked>
+    </div>
+
+  </div>
+</body>
+
 </html>

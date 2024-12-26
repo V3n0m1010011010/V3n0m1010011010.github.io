@@ -1,193 +1,150 @@
-import * as THREE from 'three';
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { ShadowMapViewer } from 'three/addons/utils/ShadowMapViewer.js';
 
-			import Stats from 'three/addons/libs/stats.module.js';
 
-			import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-			import { ShadowMapViewer } from 'three/addons/utils/ShadowMapViewer.js';
+let scene, renderer, camera, controls;
+let dirLight;
+let box;
 
-			let camera, scene, renderer, clock, stats;
-			let dirLight, spotLight;
-			let torusKnot, cube;
-			let dirLightShadowMapViewer, spotLightShadowMapViewer;
+scene = new THREE.Scene();
+//scene.add(new THREE.AmbientLight(0x404040, 3));
 
-			init();
 
-			function init() {
+renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+window.addEventListener("resize", () => {renderer.setSize(window.innerWidth, window.innerHeight)})
+renderer.setClearColor(0xffffff, 1);
+renderer.setAnimationLoop(animate);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.BasicShadowMap;
+document.body.appendChild(renderer.domElement);
 
-				initScene();
-				initShadowMapViewers();
-				initMisc();
 
-				document.body.appendChild( renderer.domElement );
-				window.addEventListener( 'resize', onWindowResize );
+camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.z = 50;
+camera.position.x = -15;
+camera.position.y = 20;
+//camera.rotate.y = (100 * Math.PI) / 180;
 
-			}
 
-			function initScene() {
+controls = new OrbitControls(camera, renderer.domElement);
 
-				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 1000 );
-				camera.position.set( 0, 15, 35 );
+let d = 15;
 
-				scene = new THREE.Scene();
+dirLight = new THREE.DirectionalLight(0xffffff, 1);
+dirLight.name = 'Dir. Light';
+dirLight.position.set(0, 20, 0);
+dirLight.castShadow = true;
+dirLight.shadow.camera.near = 1;
+dirLight.shadow.camera.far = 20;
+dirLight.shadow.camera.right = d;
+dirLight.shadow.camera.left = - d;
+dirLight.shadow.camera.top = d;
+dirLight.shadow.camera.bottom = - d;
+dirLight.shadow.mapSize.width = 1024;
+dirLight.shadow.mapSize.height = 1024;
+scene.add(dirLight);
+const dirLightHelper = new THREE.DirectionalLightHelper(dirLight, 10);
+const camerahelper = new THREE.CameraHelper(dirLight.shadow.camera)
 
-				// Lights
 
-				scene.add( new THREE.AmbientLight( 0x404040, 3 ) );
+const materialPlane = new THREE.ShadowMaterial();
+materialPlane.opacity = 0.5;
+let geometryPlane = new THREE.BoxGeometry(10, 0.001, 10);
+const plane = new THREE.Mesh(geometryPlane, materialPlane);
+plane.position.set(0, 0, 0);
+plane.rotation.x = (90 * Math.PI) / 180;
+plane.receiveShadow = true;
+plane.castShadow = false;
+plane.scale.multiplyScalar(3);
+plane.rotation.x = Math.PI
 
-				spotLight = new THREE.SpotLight( 0xffffff, 500 );
-				spotLight.name = 'Spot Light';
-				spotLight.angle = Math.PI / 5;
-				spotLight.penumbra = 0.3;
-				spotLight.position.set( 10, 10, 5 );
-				spotLight.castShadow = true;
-				spotLight.shadow.camera.near = 8;
-				spotLight.shadow.camera.far = 30;
-				spotLight.shadow.mapSize.width = 1024;
-				spotLight.shadow.mapSize.height = 1024;
-				//scene.add( spotLight );
 
-				//scene.add( new THREE.CameraHelper( spotLight.shadow.camera ) );
 
-				dirLight = new THREE.DirectionalLight( 0xffffff, 3 );
-				dirLight.name = 'Dir. Light';
-				dirLight.position.set( 0, 10, 0 );
-				dirLight.castShadow = true;
-				dirLight.shadow.camera.near = 1;
-				dirLight.shadow.camera.far = 10;
-				dirLight.shadow.camera.right = 15;
-				dirLight.shadow.camera.left = - 15;
-				dirLight.shadow.camera.top	= 15;
-				dirLight.shadow.camera.bottom = - 15;
-				dirLight.shadow.mapSize.width = 1024;
-				dirLight.shadow.mapSize.height = 1024;
-				scene.add( dirLight );
 
-				scene.add( new THREE.CameraHelper( dirLight.shadow.camera ) );
+let material = new THREE.ShaderMaterial({
+    uniforms: {
+        v_Uv: { value: new THREE.Vector2() },
+        u_Color: { value: new THREE.Color(0xeb4034) }
+    },
+    vertexShader: vertexShader(),
+    fragmentShader: fragmentShader(),
+    side: THREE.DoubleSide,
+    transparent: true,
+});
 
-				// Geometry
-				let geometry = new THREE.TorusKnotGeometry( 25, 8, 75, 20 );
-				let material = new THREE.MeshPhongMaterial( {
-					color: 0xff0000,
-					shininess: 150,
-					specular: 0x222222
-				} );
+let geometryBox = new THREE.BoxGeometry(5, 5, 5);
+let materialBox = new THREE.MeshPhongMaterial({
+    color: 0x3d803b,
+    shininess: 150,
+    specular: 0x222222
+});
+box = new THREE.Mesh(geometryBox, material);
+box.position.set(0, 5, 0);
+box.receiveShadow = true;
+box.castShadow = true;
 
-				torusKnot = new THREE.Mesh( geometry, material );
-				torusKnot.scale.multiplyScalar( 1 / 18 );
-				torusKnot.position.y = 3;
-				torusKnot.castShadow = true;
-				torusKnot.receiveShadow = true;
-				scene.add( torusKnot );
+const depthMaterial = new THREE.MeshDepthMaterial();
+depthMaterial.onBeforeCompile = function (shader) {
+    shader.fragmentShader = shader.fragmentShader.replace(
+        'gl_FragColor = vec4( vec3( 1.0 - fragCoordZ ), opacity );',
+        'gl_FragColor = vec4( vec3( 0.0 ), ( 1.0 - fragCoordZ ) );'
+    );
+};
 
-				geometry = new THREE.BoxGeometry( 3, 3, 3 );
-				cube = new THREE.Mesh( geometry, material );
-				cube.position.set( 8, 3, 8 );
-				cube.castShadow = true;
-				cube.receiveShadow = true;
-				scene.add( cube );
+camera.lookAt(box);
 
-				geometry = new THREE.BoxGeometry( 10, 0.15, 10 );
-				material = new THREE.MeshPhongMaterial( {
-					color: 0xa0adaf,
-					shininess: 150,
-					specular: 0x111111
-				} );
 
-				const ground = new THREE.Mesh( geometry, material );
-				ground.scale.multiplyScalar( 3 );
-				ground.castShadow = false;
-				ground.receiveShadow = true;
-				scene.add( ground );
+scene.add(dirLight);
+scene.add(dirLightHelper);
+scene.add(camerahelper);
+scene.add(plane);
+scene.add(box);
 
-			}
 
-			function initShadowMapViewers() {
+document.getElementById('light-intensity').addEventListener('input', (event) => {
+    materialPlane.opacity = event.target.value;
+});
+document.getElementById('bg-color').addEventListener('input', (event) => {
+    scene.background = new THREE.Color(event.target.value);
+});
+document.getElementById('lighthelper').addEventListener('input', (event) => {
+    dirLightHelper.visible = event.target.checked;
+    camerahelper.visible = event.target.checked;
+});
+document.getElementById('box-rotation').addEventListener('input', (event) => {
+    speed = event.target.value;
+});
 
-				dirLightShadowMapViewer = new ShadowMapViewer( dirLight );
-				resizeShadowMapViewers();
 
-			}
-
-			function initMisc() {
-
-				renderer = new THREE.WebGLRenderer( { antialias: true } );
-				renderer.setPixelRatio( window.devicePixelRatio );
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				renderer.setAnimationLoop( animate );
-				renderer.shadowMap.enabled = true;
-				renderer.shadowMap.type = THREE.BasicShadowMap;
-
-				// Mouse control
-				const controls = new OrbitControls( camera, renderer.domElement );
-				controls.target.set( 0, 2, 0 );
-				controls.update();
-
-				clock = new THREE.Clock();
-
-				stats = new Stats();
-				document.body.appendChild( stats.dom );
-
-			}
-
-			function resizeShadowMapViewers() {
-
-				const size = window.innerWidth * 0.15;
-
-				dirLightShadowMapViewer.position.x = 10;
-				dirLightShadowMapViewer.position.y = 10;
-				dirLightShadowMapViewer.size.width = size;
-				dirLightShadowMapViewer.size.height = size;
-				dirLightShadowMapViewer.update(); //Required when setting position or size directly
-
-				// spotLightShadowMapViewer.update();	//NOT required because .set updates automatically
-
-			}
-
-			function onWindowResize() {
-
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
-
-				renderer.setSize( window.innerWidth, window.innerHeight );
-
-				resizeShadowMapViewers();
-				dirLightShadowMapViewer.updateForWindowResize();
-
-			}
-
-			function animate() {
-
-				render();
-
-				stats.update();
-
-			}
-
-			function renderScene() {
-
-				renderer.render( scene, camera );
-
-			}
-
-			function renderShadowMapViewers() {
-
-				dirLightShadowMapViewer.render( renderer );
-
-			}
-
-			function render() {
-
-				const delta = clock.getDelta();
-
-				renderScene();
-				renderShadowMapViewers();
-
-				torusKnot.rotation.x += 0.25 * delta;
-				torusKnot.rotation.y += 2 * delta;
-				torusKnot.rotation.z += 1 * delta;
-
-				cube.rotation.x += 0.25 * delta;
-				cube.rotation.y += 2 * delta;
-				cube.rotation.z += 1 * delta;
-
-			}
+let speed = 1;
+let clock = new THREE.Clock();
+function animate() {
+    const delta = clock.getDelta();
+    controls.update();
+    box.rotation.x += 0.25 * delta * speed;
+    box.rotation.y += 2 * delta * speed;
+    box.rotation.z += 1 * delta * speed;
+    renderer.render(scene, camera);
+}
+function vertexShader() {
+    return `
+        varying vec2 v_Uv;
+		void main( ) {
+				v_Uv = uv;
+				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+				gl_Position = projectionMatrix * mvPosition;
+		} 
+    `;
+}
+function fragmentShader() {
+    return `
+        varying vec2 v_Uv;
+        uniform vec3 u_Color;
+        void main() {
+            vec2 position = v_Uv;
+            gl_FragColor = vec4(u_Color - position.y, position.x);
+        }
+    `;
+}
