@@ -66,7 +66,8 @@ plane.rotation.x = Math.PI
 let material = new THREE.ShaderMaterial({
     uniforms: {
         v_Uv: { value: new THREE.Vector2() },
-        u_Color: { value: new THREE.Color(0xeb4034) }
+        u_Color1: { value: new THREE.Color(0xeb4034) },
+        u_Color2: { value: new THREE.Color(0x030ffc) }
     },
     vertexShader: vertexShader(),
     fragmentShader: fragmentShader(),
@@ -141,10 +142,12 @@ function vertexShader() {
 function fragmentShader() {
     return `
         varying vec2 v_Uv;
-        uniform vec3 u_Color;
+        uniform vec3 u_Color1;
+        uniform vec3 u_Color2;
         void main() {
             vec2 position = v_Uv;
-            gl_FragColor = vec4(u_Color - position.y, position.x);
+            vec3 mixedColor = mix(u_Color1, u_Color2, position.y);
+            gl_FragColor = vec4(mixedColor, .5);
         }
     `;
 }
