@@ -41,7 +41,7 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
 // Grundgeschwindigkeit der Rotation
-const baseRotateSpeed = 0.8;
+const baseRotateSpeed = 2;
 
 // Funktion für dynamische Rotationsgeschwindigkeit
 function updateRotateSpeed() {
