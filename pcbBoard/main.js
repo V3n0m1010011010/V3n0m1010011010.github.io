@@ -2,7 +2,6 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
-// Szene
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x222222);
 
@@ -41,6 +40,23 @@ const controls = new OrbitControls(
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
+// Grundgeschwindigkeit der Rotation
+const baseRotateSpeed = 0.8;
+
+// Funktion für dynamische Rotationsgeschwindigkeit
+function updateRotateSpeed() {
+    const distance = camera.position.distanceTo(controls.target);
+
+    // Je näher die Kamera, desto langsamer
+    const speed = THREE.MathUtils.clamp(
+        distance * 0.15,
+        0.05,
+        baseRotateSpeed
+    );
+
+    controls.rotateSpeed = speed;
+}
+
 // GLB Loader
 const loader = new GLTFLoader();
 
@@ -48,12 +64,11 @@ loader.load(
     "./model.glb",
 
     (gltf) => {
-
         const model = gltf.scene;
 
         scene.add(model);
 
-        // Bounding Box des Modells bestimmen
+        // Größe und Mittelpunkt bestimmen
         const box = new THREE.Box3().setFromObject(model);
 
         const center = box.getCenter(
@@ -64,7 +79,7 @@ loader.load(
             new THREE.Vector3()
         );
 
-        // Modell zum Ursprung verschieben
+        // Modell zentrieren
         model.position.sub(center);
 
         // Größte Ausdehnung
@@ -74,7 +89,7 @@ loader.load(
             size.z
         );
 
-        // Kameraabstand
+        // Kamera passend positionieren
         const distance = maxSize * 1.5;
 
         camera.position.set(
@@ -83,15 +98,15 @@ loader.load(
             distance
         );
 
-        // Kamera-Clipping
         camera.near = maxSize / 1000;
         camera.far = maxSize * 100;
 
         camera.updateProjectionMatrix();
 
-        // Orbit Controls auf Modellzentrum
         controls.target.set(0, 0, 0);
         controls.update();
+
+        updateRotateSpeed();
 
         console.log("GLB geladen");
         console.log("Größe:", size);
@@ -99,11 +114,13 @@ loader.load(
     },
 
     (progress) => {
-        console.log(
-            "Laden:",
-            (progress.loaded / progress.total * 100).toFixed(1),
-            "%"
-        );
+        if (progress.total) {
+            console.log(
+                "Laden:",
+                (progress.loaded / progress.total * 100).toFixed(1),
+                "%"
+            );
+        }
     },
 
     (error) => {
@@ -114,9 +131,8 @@ loader.load(
     }
 );
 
-// Fenstergröße ändern
+// Fenstergröße
 window.addEventListener("resize", () => {
-
     camera.aspect =
         window.innerWidth /
         window.innerHeight;
@@ -131,10 +147,12 @@ window.addEventListener("resize", () => {
 
 // Renderloop
 function animate() {
-
     requestAnimationFrame(animate);
 
     controls.update();
+
+    // Rotationsgeschwindigkeit ständig anpassen
+    updateRotateSpeed();
 
     renderer.render(
         scene,
