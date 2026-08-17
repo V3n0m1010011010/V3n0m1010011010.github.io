@@ -40,24 +40,28 @@ const controls = new OrbitControls(
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
-// Grundgeschwindigkeit der Rotation
-const baseRotateSpeed = 2;
+// Rotationsgeschwindigkeit
+const baseRotateSpeed = 0.8;
 
-// Funktion für dynamische Rotationsgeschwindigkeit
+// Ursprünglicher Kameraabstand
+let maxCameraDistance = 1;
+
+// Rotationsgeschwindigkeit abhängig vom Zoom
 function updateRotateSpeed() {
     const distance = camera.position.distanceTo(controls.target);
 
-    // Je näher die Kamera, desto langsamer
+    const ratio = distance / maxCameraDistance;
+
     const speed = THREE.MathUtils.clamp(
-        distance * 0.15,
-        0.05,
+        baseRotateSpeed * Math.pow(ratio, 0.7),
+        0.15,
         baseRotateSpeed
     );
 
     controls.rotateSpeed = speed;
 }
 
-// GLB Loader
+// GLB laden
 const loader = new GLTFLoader();
 
 loader.load(
@@ -89,7 +93,7 @@ loader.load(
             size.z
         );
 
-        // Kamera passend positionieren
+        // Kameraabstand
         const distance = maxSize * 1.5;
 
         camera.position.set(
@@ -98,11 +102,18 @@ loader.load(
             distance
         );
 
+        // Ursprünglichen Abstand speichern
+        maxCameraDistance = camera.position.distanceTo(
+            controls.target
+        );
+
+        // Clipping
         camera.near = maxSize / 1000;
         camera.far = maxSize * 100;
 
         camera.updateProjectionMatrix();
 
+        // Kamera auf Modell ausrichten
         controls.target.set(0, 0, 0);
         controls.update();
 
@@ -110,7 +121,7 @@ loader.load(
 
         console.log("GLB geladen");
         console.log("Größe:", size);
-        console.log("Kameraabstand:", distance);
+        console.log("Kameraabstand:", maxCameraDistance);
     },
 
     (progress) => {
@@ -150,8 +161,6 @@ function animate() {
     requestAnimationFrame(animate);
 
     controls.update();
-
-    // Rotationsgeschwindigkeit ständig anpassen
     updateRotateSpeed();
 
     renderer.render(
