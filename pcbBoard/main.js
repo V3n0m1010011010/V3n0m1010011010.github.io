@@ -2,7 +2,6 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
-// Szene
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x222222);
 
@@ -41,19 +40,39 @@ const controls = new OrbitControls(
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
-// GLB Loader
+// Rotationsgeschwindigkeit
+const baseRotateSpeed = 0.8;
+
+// Ursprünglicher Kameraabstand
+let maxCameraDistance = 1;
+
+// Rotationsgeschwindigkeit abhängig vom Zoom
+function updateRotateSpeed() {
+    const distance = camera.position.distanceTo(controls.target);
+
+    const ratio = distance / maxCameraDistance;
+
+    const speed = THREE.MathUtils.clamp(
+        baseRotateSpeed * Math.pow(ratio, 0.7),
+        0.15,
+        baseRotateSpeed
+    );
+
+    controls.rotateSpeed = speed;
+}
+
+// GLB laden
 const loader = new GLTFLoader();
 
 loader.load(
     "./model.glb",
 
     (gltf) => {
-
         const model = gltf.scene;
 
         scene.add(model);
 
-        // Bounding Box des Modells bestimmen
+        // Größe und Mittelpunkt bestimmen
         const box = new THREE.Box3().setFromObject(model);
 
         const center = box.getCenter(
@@ -64,7 +83,7 @@ loader.load(
             new THREE.Vector3()
         );
 
-        // Modell zum Ursprung verschieben
+        // Modell zentrieren
         model.position.sub(center);
 
         // Größte Ausdehnung
@@ -83,27 +102,36 @@ loader.load(
             distance
         );
 
-        // Kamera-Clipping
+        // Ursprünglichen Abstand speichern
+        maxCameraDistance = camera.position.distanceTo(
+            controls.target
+        );
+
+        // Clipping
         camera.near = maxSize / 1000;
         camera.far = maxSize * 100;
 
         camera.updateProjectionMatrix();
 
-        // Orbit Controls auf Modellzentrum
+        // Kamera auf Modell ausrichten
         controls.target.set(0, 0, 0);
         controls.update();
 
+        updateRotateSpeed();
+
         console.log("GLB geladen");
         console.log("Größe:", size);
-        console.log("Kameraabstand:", distance);
+        console.log("Kameraabstand:", maxCameraDistance);
     },
 
     (progress) => {
-        console.log(
-            "Laden:",
-            (progress.loaded / progress.total * 100).toFixed(1),
-            "%"
-        );
+        if (progress.total) {
+            console.log(
+                "Laden:",
+                (progress.loaded / progress.total * 100).toFixed(1),
+                "%"
+            );
+        }
     },
 
     (error) => {
@@ -114,9 +142,8 @@ loader.load(
     }
 );
 
-// Fenstergröße ändern
+// Fenstergröße
 window.addEventListener("resize", () => {
-
     camera.aspect =
         window.innerWidth /
         window.innerHeight;
@@ -131,10 +158,10 @@ window.addEventListener("resize", () => {
 
 // Renderloop
 function animate() {
-
     requestAnimationFrame(animate);
 
     controls.update();
+    updateRotateSpeed();
 
     renderer.render(
         scene,
